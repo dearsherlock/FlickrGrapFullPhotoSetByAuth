@@ -98,6 +98,7 @@ LOCK_PATH = eval(config.get('Config','LOCK_PATH'))
 TOKEN_PATH = eval(config.get('Config','TOKEN_PATH'))
 EXCLUDED_FOLDERS = eval(config.get('Config','EXCLUDED_FOLDERS'))
 ALLOWED_EXT = eval(config.get('Config','ALLOWED_EXT'))
+GRAP_PHOTOSETS = eval(config.get('Config','GRAP_PHOTOSETS'))
 RAW_EXT = eval(config.get('Config','RAW_EXT'))
 FILE_MAX_SIZE = eval(config.get('Config','FILE_MAX_SIZE'))
 MANAGE_CHANGES = eval(config.get('Config','MANAGE_CHANGES'))
@@ -1140,9 +1141,12 @@ class Uploadr:
             allsets = cur.fetchall()
             for row in allsets:
                 print("Set: " + str(row[0]) + "(" + row[1] + ")")
-                print(str(row[0])+"--->")
-                self.retrieveFlickrSetsPhotos( str(row[0]) )
-								
+                for eachItem in GRAP_PHOTOSETS:
+                    print("eachitem="+eachItem)
+                    if (str(row[1]).lower().find(eachItem))>=0:
+                        self.retrieveFlickrSetsPhotos( str(row[0]), str(row[1]))
+                    else :
+                        print("Not Fetch Photo in "+eachItem)
 								
 
     # Display Sets
@@ -1158,8 +1162,11 @@ class Uploadr:
 		
 		
     # Get sets's Photos information
-    def retrieveFlickrSetsPhotos( self, photosetId):
-        print('*****Fetch Flickr Sets on Flickr*****')
+    def retrieveFlickrSetsPhotos( self, photosetId, photoSetName):
+        f = open('Photoset-'+photosetId+'.markdown', 'w')
+        #it will write to user directory ex: /Users/sherlock/Photoset-72157650270208337.log
+        f.write('### '+photoSetName+'(Photoset Id:'+photosetId+')\n')
+        print('*****Fetch Flickr Sets ('+photoSetName+')on Flickr*****')
         try:
             d = {
                 "auth_token"          : str(self.token),
@@ -1173,16 +1180,19 @@ class Uploadr:
             res = self.getResponse(url)
             if (self.isGood(res)):
                 for row in res['photoset']['photo']:
-                    photoId = row['id']
-                    secret = row['secret']
-                    server = row['server']
-                    farm = row['farm']
+                    photoId = str(row['id'])
+                    secret = str(row['secret'])
+                    server = str(row['server'])
+                    farm = str(row['farm'])
+                    f.write("![image](https://farm"+farm+".staticflickr.com/"+server+"/"+photoId+"_"+secret+"_b.jpg)\n")
+                    print("https://farm"+farm+".staticflickr.com/"+server+"/"+photoId+"_"+secret+"_b.jpg")
             else:
                 print(d)
                 self.reportError(res)
         except:
             print(str(sys.exc_info()))
         print('*****Completed adding Flickr Sets to DB*****')
+        f.close()
     
     
     # Get sets from Flickr
@@ -1260,7 +1270,7 @@ if __name__ == "__main__":
     else:
         if ( not flick.checkToken() ):
             flick.authenticate()
-        flick.displaySets()
+        #flick.displaySets()
         flick.displaySetsAndPhotos()
         #flick.removeUselessSetsTable()
         flick.getFlickrSets()
